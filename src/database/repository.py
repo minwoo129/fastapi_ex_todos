@@ -17,3 +17,9 @@ def create_todo(session: Session, todo: ToDo) -> ToDo:
     session.commit()
     session.refresh(instance=todo) # db read -> todo_id
     return todo
+
+def update_todo(session: Session, todo: ToDo) -> ToDo:
+    session.add(instance=todo)
+    session.commit() # db save
+    session.refresh(instance=todo)
+    return todo
