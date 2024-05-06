@@ -4,7 +4,7 @@ from fastapi import FastAPI, Body, HTTPException, Depends
 from sqlalchemy.orm import Session
 
 from database.connection import get_db
-from database.repository import get_todos, get_todo_by_todo_id, create_todo, update_todo
+from database.repository import get_todos, get_todo_by_todo_id, create_todo, update_todo, delete_todo
 
 from database.orm import ToDo
 from schema.response import ToDoListSchema, ToDoSchema
@@ -54,11 +54,9 @@ def get_todo_handler(
         session: Session = Depends(get_db)
 ) -> ToDoSchema:
     todo: ToDo | None = get_todo_by_todo_id(session, todo_id)
-
-    if todo:
-        return ToDoSchema.from_orm(todo)
-
-    raise HTTPException(status_code=404, detail="Todo Not Found")
+    if not todo:
+        raise HTTPException(status_code=404, detail="Todo Not Found")
+    return ToDoSchema.from_orm(todo)
 
 
 @app.post("/todos", status_code=201)
@@ -78,17 +76,20 @@ def update_todo_handler(
 ):
     todo: ToDo | None = get_todo_by_todo_id(session, todo_id)
 
-    if todo:
-        todo.done() if is_done else todo.undone()
-        todo: ToDo = update_todo(session, todo)
-        return ToDoSchema.from_orm(todo)
+    if not todo:
+        raise HTTPException(status_code=404, detail="Todo Not Found")
 
-    raise HTTPException(status_code=404, detail="Todo Not Found")
-
+    todo.done() if is_done else todo.undone()
+    todo: ToDo = update_todo(session, todo)
+    return ToDoSchema.from_orm(todo)
 @app.delete("/todos/{todo_id}", status_code=204)
-def delete_todo_handler(todo_id: int):
-    todo = todo_data.pop(todo_id, None)
-    if todo:
-        return
+def delete_todo_handler(
+        todo_id: int,
+        session: Session = Depends(get_db)
+):
+    todo: ToDo | None = get_todo_by_todo_id(session, todo_id)
 
-    raise HTTPException(status_code=404, detail="Todo Not Found")
+    if not todo:
+        raise HTTPException(status_code=404, detail="Todo Not Found")
+
+    delete_todo(session, todo_id)
